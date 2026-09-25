@@ -83,6 +83,15 @@ product you'd created yourself (e.g. via "Add Product") still marked it
 deleted internally, but it kept showing up in the products list and the
 dashboard. Fixed by filtering `data.added` against `deleted` too.
 
+## Bug fix: editing a locally-added product didn't show on the list
+`editProduct()` always saves changes into the `edited` patch map, keyed by
+id. The detail page checks that map first, so it correctly showed an edited
+version of a locally-added product — but `applyOverrides()` (used by the
+products list and dashboard) only applied `edited` patches to products that
+came from the real API, never to `added` (locally-created) ones. So editing
+a product you'd added yourself showed the fix on its detail page but not in
+the list. Fixed by applying the same `edited` patch to `added` products too.
+
 ## Where AI helped
 Used an AI assistant to scaffold the page structure quickly and to write
 the first draft of the pagination/URL-sync logic, which I then reviewed and
