@@ -32,7 +32,7 @@ function EditInner() {
     } catch {
       // keep local edit even if the API call fails, see NOTES.md
     }
-    editProduct(id, data);
+    editProduct(id, data, initial);
     router.push(`/products/${id}`);
   }
 

@@ -11,6 +11,23 @@ import { applyOverrides, deleteProduct as deleteOverride } from '../../lib/overr
 
 const PAGE_SIZES = [10, 20, 50];
 
+function StockBadge({ stock }) {
+  let cls = 'bg-emerald-100 text-emerald-700';
+  let label = 'In stock';
+  if (stock === 0) {
+    cls = 'bg-red-100 text-red-700';
+    label = 'Out of stock';
+  } else if (stock < 10) {
+    cls = 'bg-amber-100 text-amber-700';
+    label = 'Low stock';
+  }
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>
+      {stock} · {label}
+    </span>
+  );
+}
+
 function ProductsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,24 +135,35 @@ function ProductsInner() {
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('tokenExpiry');
     router.push('/login');
   }
 
   function confirmDelete() {
-    deleteOverride(deleteId);
+    const snapshot = products.find((p) => p.id === deleteId);
+    deleteOverride(deleteId, snapshot);
     setDeleteId(null);
     fetchProducts();
   }
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Products</h1>
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Products</h1>
+          <p className="text-sm text-slate-500">{total} items in your catalog</p>
+        </div>
         <div className="flex gap-2">
-          <Link href="/products/new" className="bg-green-600 text-white px-3 py-1.5 rounded">
+          <Link href="/dashboard" className="border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-50">
+            Dashboard
+          </Link>
+          <Link href="/history" className="border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-50">
+            History
+          </Link>
+          <Link href="/products/new" className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg">
             + Add Product
           </Link>
-          <button onClick={handleLogout} className="border px-3 py-1.5 rounded">
+          <button onClick={handleLogout} className="border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-50">
             Logout
           </button>
         </div>
@@ -201,60 +229,69 @@ function ProductsInner() {
 
       {!loading && !error && products.length > 0 && (
         <>
-          <table className="w-full text-sm hidden md:table border-collapse">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2">Image</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Rating</th>
-                <th>Stock</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2">
-                    <img src={p.thumbnail || p.images?.[0]} alt={p.title} className="w-12 h-12 object-cover rounded" />
-                  </td>
-                  <td>
-                    <Link href={`/products/${p.id}`} className="text-blue-600">
-                      {p.title}
-                    </Link>
-                  </td>
-                  <td>{p.category}</td>
-                  <td>${p.price}</td>
-                  <td>{p.rating}</td>
-                  <td>{p.stock}</td>
-                  <td className="whitespace-nowrap">
-                    <Link href={`/products/${p.id}/edit`} className="text-blue-600 mr-2">
-                      Edit
-                    </Link>
-                    <button onClick={() => setDeleteId(p.id)} className="text-red-600">
-                      Delete
-                    </button>
-                  </td>
+          <div className="hidden md:block rounded-xl border border-slate-200 overflow-hidden bg-white">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-left bg-slate-50 text-slate-600 border-b border-slate-200">
+                  <th className="py-3 px-3">Image</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Rating</th>
+                  <th>Stock</th>
+                  <th className="px-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {products.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-colors">
+                    <td className="py-2 px-3">
+                      <img src={p.thumbnail || p.images?.[0]} alt={p.title} className="w-12 h-12 object-cover rounded-lg" />
+                    </td>
+                    <td>
+                      <Link href={`/products/${p.id}`} className="text-indigo-600 font-medium hover:underline">
+                        {p.title}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{p.category}</span>
+                    </td>
+                    <td className="font-medium">${p.price}</td>
+                    <td>⭐ {p.rating}</td>
+                    <td>
+                      <StockBadge stock={p.stock} />
+                    </td>
+                    <td className="whitespace-nowrap px-3">
+                      <Link href={`/products/${p.id}/edit`} className="text-indigo-600 mr-3">
+                        Edit
+                      </Link>
+                      <button onClick={() => setDeleteId(p.id)} className="text-red-600">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="md:hidden space-y-3">
             {products.map((p) => (
-              <div key={p.id} className="border rounded-lg p-3 flex gap-3 bg-white">
-                <img src={p.thumbnail || p.images?.[0]} alt={p.title} className="w-16 h-16 object-cover rounded" />
+              <div key={p.id} className="border border-slate-200 rounded-xl p-3 flex gap-3 bg-white shadow-sm">
+                <img src={p.thumbnail || p.images?.[0]} alt={p.title} className="w-16 h-16 object-cover rounded-lg" />
                 <div className="flex-1">
-                  <Link href={`/products/${p.id}`} className="font-medium text-blue-600">
+                  <Link href={`/products/${p.id}`} className="font-medium text-indigo-600">
                     {p.title}
                   </Link>
                   <p className="text-xs text-gray-500">{p.category}</p>
-                  <p className="text-sm">
-                    ${p.price} • ⭐{p.rating} • stock {p.stock}
+                  <p className="text-sm mt-0.5">
+                    <span className="font-medium">${p.price}</span> • ⭐{p.rating}
                   </p>
-                  <div className="mt-1 text-sm">
-                    <Link href={`/products/${p.id}/edit`} className="text-blue-600 mr-3">
+                  <div className="mt-1">
+                    <StockBadge stock={p.stock} />
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <Link href={`/products/${p.id}/edit`} className="text-indigo-600 mr-3">
                       Edit
                     </Link>
                     <button onClick={() => setDeleteId(p.id)} className="text-red-600">

@@ -43,6 +43,46 @@ the input to feel responsive. Fix: keep the raw typed text in local
 component state (`inputValue`) for instant feedback, and only push it into
 the URL (which triggers the actual fetch) after the debounce timer fires.
 
+## Later improvements
+- Login no longer pre-fills the demo credentials (a "Use demo credentials"
+  button fills them in one click instead, so it's still easy to test but
+  nothing sensitive is exposed by default).
+- Login now sends `expiresInMins: 5` to DummyJSON, so the JWT it gets back
+  expires in 5 minutes. The expiry timestamp is stored alongside the token,
+  and `Protected` sets a timer to auto-logout exactly when it runs out —
+  this is on top of the existing 401 handling in `lib/axios.js`, which
+  catches it if the server rejects an expired token before the client timer
+  fires.
+- Added a `/dashboard` page: total products, inventory value, low/out-of-
+  stock counts, average rating, and a simple category breakdown — gives the
+  app an actual "admin dashboard" landing view instead of just a list.
+- Product table/cards now show colored stock badges (in stock / low stock /
+  out of stock) instead of a bare number, and category is shown as a pill.
+
+## Change history + restore deleted items
+Added a `/history` page and extended `lib/overrides.js` with a `history`
+array. Every add, edit, delete and restore gets logged with a timestamp;
+edits store a before/after snapshot so the page can show exactly which
+fields changed. Deletes can be undone with a "Restore" button, which simply
+removes that id from the `deleted` list — the product's data still comes
+from the live API (or from the edited/added override if there is one), so
+nothing needs to be re-created from scratch.
+
+## Bug fix: newly-added products showed "not found"
+Locally-added products get a new id (`Date.now()`) that doesn't exist on the
+real DummyJSON server. The detail page originally always called
+`GET /products/:id` first, which 404'd for these ids before the local
+override was ever checked. Fixed by adding `isLocallyAdded()` in
+`lib/overrides.js` and having the detail page use the local copy directly,
+skipping the API call, whenever the product was created in this browser.
+
+## Bug fix: deleting a locally-added product didn't actually hide it
+`applyOverrides()` filtered the API-fetched products against the `deleted`
+list, but spread `data.added` back in unconditionally — so deleting a
+product you'd created yourself (e.g. via "Add Product") still marked it
+deleted internally, but it kept showing up in the products list and the
+dashboard. Fixed by filtering `data.added` against `deleted` too.
+
 ## Where AI helped
 Used an AI assistant to scaffold the page structure quickly and to write
 the first draft of the pagination/URL-sync logic, which I then reviewed and

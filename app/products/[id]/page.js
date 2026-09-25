@@ -5,7 +5,7 @@ import Link from 'next/link';
 import api from '../../../lib/axios';
 import Protected from '../../../components/Protected';
 import Loader from '../../../components/Loader';
-import { getOverrideById } from '../../../lib/overrides';
+import { getOverrideById, isLocallyAdded } from '../../../lib/overrides';
 
 function DetailInner() {
   const { id } = useParams();
@@ -22,6 +22,15 @@ function DetailInner() {
     const override = getOverrideById(id);
     if (override?.deleted) {
       setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    // Products created locally with "Add Product" only exist in this
+    // browser — fetching them from the real API would always 404, so use
+    // the local copy directly and skip the network call entirely.
+    if (isLocallyAdded(id)) {
+      setProduct(override);
       setLoading(false);
       return;
     }
